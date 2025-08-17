@@ -3,14 +3,14 @@ import axios from 'axios';
 import './App.css';
 
 function App() {
-  const [userId, setUserId] = useState('');
+  const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState('');
 
-  const validateUserId = (userId) => {
-    const userIdRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    return userIdRegex.test(userId);
+  const validateEmail = (email) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
   };
 
   const handleSubmit = async (e) => {
@@ -18,13 +18,13 @@ function App() {
     setError('');
     setResult(null);
 
-    if (!userId.trim()) {
-      setError('Please enter a User ID');
+    if (!email.trim()) {
+      setError('Please enter an email address');
       return;
     }
 
-    if (!validateUserId(userId)) {
-      setError('Please enter a valid User ID (GUID format)');
+    if (!validateEmail(email)) {
+      setError('Please enter a valid email address');
       return;
     }
 
@@ -32,7 +32,7 @@ function App() {
 
     try {
       const response = await axios.post('/api/checkAuthorization', {
-        userId: userId.trim()
+        email: email.trim()
       });
 
       setResult(response.data);
@@ -53,28 +53,28 @@ function App() {
     }
   };
 
-  const handleUserIdChange = (e) => {
-    setUserId(e.target.value);
+  const handleEmailChange = (e) => {
+    setEmail(e.target.value);
     if (error) setError('');
     if (result) setResult(null);
   };
 
   return (
     <div className="container">
-      <h1 className="title">Group Membership Checker (User ID)</h1>
+      <h1 className="title">Group Membership Checker (Email)</h1>
       
       <form onSubmit={handleSubmit}>
         <div className="form-group">
-          <label htmlFor="userId" className="label">
-            User ID
+          <label htmlFor="email" className="label">
+            Email Address
           </label>
           <input
-            type="text"
-            id="userId"
+            type="email"
+            id="email"
             className="input"
-            value={userId}
-            onChange={handleUserIdChange}
-            placeholder="Enter User ID (GUID format) to check"
+            value={email}
+            onChange={handleEmailChange}
+            placeholder="Enter email address to check"
             disabled={loading}
           />
           {error && <div className="error-message">{error}</div>}
@@ -83,7 +83,7 @@ function App() {
         <button
           type="submit"
           className="button"
-          disabled={loading || !userId.trim()}
+          disabled={loading || !email.trim()}
         >
           {loading ? (
             <div className="loading">
@@ -104,6 +104,7 @@ function App() {
           {result.userDetails && (
             <div className="user-details">
               <h4>User Details:</h4>
+              <p><strong>Email:</strong> {result.userDetails.email}</p>
               <p><strong>User ID:</strong> {result.userDetails.id}</p>
             </div>
           )}

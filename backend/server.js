@@ -44,13 +44,37 @@ async function getAccessToken() {
 }
 
 // Check if user is member of the specified group
-async function checkGroupMembership(userId, accessToken) {
+async function checkGroupMembership(email, accessToken) {
   console.log('=== checkGroupMembership function called ===');
-  console.log('User ID parameter:', userId);
+  console.log('Email parameter:', email);
   console.log('Access token length:', accessToken ? accessToken.length : 'undefined');
   
   try {
     console.log('=== Starting group membership check ===');
+    
+    // First, get the user by email to get their ID
+    let userId;
+    try {
+      const userResponse = await axios.get(
+        `${GRAPH_API_BASE}/users/${encodeURIComponent(email)}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      
+      userId = userResponse.data.id;
+      console.log('User found with ID:', userId);
+    } catch (userError) {
+      console.log('User not found by email:', email);
+      return {
+        isMember: false,
+        userDetails: null,
+        error: 'User not found with the provided email'
+      };
+    }
     
     // Method 1: Check using the members/$ref endpoint
     try {
@@ -138,6 +162,7 @@ async function checkGroupMembership(userId, accessToken) {
       
       // Debug: Print the isMember value
       console.log('=== Group Membership Check Debug ===');
+      console.log('Email:', email);
       console.log('User ID:', userId);
       console.log('Group ID:', GROUP_ID);
       console.log('Total members in group:', members.length);
@@ -147,7 +172,8 @@ async function checkGroupMembership(userId, accessToken) {
       return {
         isMember,
         userDetails: {
-          id: userId
+          id: userId,
+          email: email
         }
       };
     } catch (refError) {
@@ -185,7 +211,8 @@ async function checkGroupMembership(userId, accessToken) {
       return {
         isMember,
         userDetails: {
-          id: userId
+          id: userId,
+          email: email
         }
       };
     }
@@ -216,7 +243,8 @@ async function checkGroupMembership(userId, accessToken) {
       return {
         isMember,
         userDetails: {
-          id: userId
+          id: userId,
+          email: email
         }
       };
     } catch (checkError) {
@@ -245,25 +273,25 @@ async function checkGroupMembership(userId, accessToken) {
 app.post('/api/checkAuthorization', async (req, res) => {
   console.log('=== API Call Received ===');
   console.log('Request body:', req.body);
-  console.log('User ID received:', req.body.userId);
+  console.log('Email received:', req.body.email);
   console.log('========================');
   
   try {
-    const { userId } = req.body;
+    const { email } = req.body;
 
-    if (!userId) {
+    if (!email) {
       return res.status(400).json({
         success: false,
-        message: 'User ID is required'
+        message: 'Email is required'
       });
     }
 
-    // Validate user ID format (GUID format)
-    const userIdRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    if (!userIdRegex.test(userId)) {
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
       return res.status(400).json({
         success: false,
-        message: 'Please provide a valid User ID (GUID format)'
+        message: 'Please provide a valid email address'
       });
     }
 
@@ -273,8 +301,8 @@ app.post('/api/checkAuthorization', async (req, res) => {
     console.log('Access token received successfully');
 
     // Check group membership
-    console.log('Checking group membership for user ID:', userId);
-    const result = await checkGroupMembership(userId, accessToken);
+    console.log('Checking group membership for email:', email);
+    const result = await checkGroupMembership(email, accessToken);
 
     res.json({
       success: true,
